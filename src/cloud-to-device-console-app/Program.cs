@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -61,7 +62,7 @@ namespace C2D_Console
         }
 
         static MediaGraphInstance BuildInstance(
-            string topologyName,
+            MediaGraphTopology topology,
             string url,
             string userName,
             string password)
@@ -76,28 +77,47 @@ namespace C2D_Console
                 userName = "testuser";
                 password = "testpassword";    
             }
+
+            var parameters = new List<MediaGraphParameterDefinition>(){
+                { new MediaGraphParameterDefinition {
+                    Name = "rtspUrl",
+                    Value = url
+                }},
+                { new MediaGraphParameterDefinition {
+                    Name = "rtspUserName",
+                    Value = userName
+                }},
+                { new MediaGraphParameterDefinition {
+                    Name = "rtspPassword",
+                    Value = password
+                }}};
+            topology.Properties.Parameters.ToList().ForEach(p => {
+                if (! new string[] {"rtspUrl", "rtspUserName", "rtspPassword"}.Contains(p.Name))
+                {
+                    var input = GetInputFor(p.Name);
+                    if (!string.IsNullOrWhiteSpace(input))
+                        parameters.Add(new MediaGraphParameterDefinition {
+                            Name = p.Name,
+                            Value = input
+                        });
+                }
+            });
             
             return new MediaGraphInstance {
                 Name = $"Sample-Graph-1",
                 Properties = new MediaGraphInstanceProperties {
-                    TopologyName = topologyName,
+                    TopologyName = topology.Name,
                     Description = "Sample graph description",
-                    Parameters = new List<MediaGraphParameterDefinition> {
-                        { new MediaGraphParameterDefinition {
-                            Name = "rtspUrl",
-                            Value = url
-                        }},
-                        { new MediaGraphParameterDefinition {
-                            Name = "rtspUserName",
-                            Value = userName
-                        }},
-                        { new MediaGraphParameterDefinition {
-                            Name = "rtspPassword",
-                            Value = password
-                        }},
-                    }
+                    Parameters = parameters
                 }
             };
+        }
+
+        static string GetInputFor(string parameterName)
+        {
+            Console.WriteLine($"Input the desired value for parameter \"{parameterName}\" and press <ENTER> (leave blank to use default)");
+            var result = Console.ReadLine();
+            return result;
         }
 
         static async Task Main(string[] args)
@@ -134,7 +154,7 @@ namespace C2D_Console
                 // NOTE: different topologies, need a minimum set of modules running. There're 3 deployment manifests
                 //       under /src/edge folder. Each topology has it's minimum module requirements to run commented
                 //       onto them.
-                var instance = BuildInstance(topology.Name, rtspUrl, rtspUserName, rtspPassword);
+                var instance = BuildInstance(topology, rtspUrl, rtspUserName, rtspPassword);
 
                 // NOTE: obtain the ordered operation set.
                 var steps = Orchestrate(topology, instance);

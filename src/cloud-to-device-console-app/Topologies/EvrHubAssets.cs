@@ -195,9 +195,22 @@ namespace C2D_Console.Topologies
             return new List<MediaGraphSink> {
                 { new MediaGraphIoTHubMessageSink {
                     Name = "hubSink",
-                    HubOutputName = "inferenceOutput",
+                    HubOutputName = "${hubSinkOutputName}",
                     Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("httpExtension") }
+                        { new MediaGraphNodeInput("inferenceClient") }
+                    }
+                }},
+                { new MediaGraphAssetSink {
+                    Name = "assetSink",
+                    AssetNamePattern = "sampleAssetFromEVR-LVAEdge-${System.DateTime}",
+                    // NOTE: Unlike the other MediaGraph* implementations, this property
+                    //       expects a TimeSpan instead of the pseudo-language
+                    SegmentLength = TimeSpan.FromSeconds(30), //"PT30S",
+                    //
+                    LocalMediaCacheMaximumSizeMiB = "2048",
+                    LocalMediaCachePath = "/var/lib/azuremediaservices/tmp/",
+                    Inputs = new List<MediaGraphNodeInput> {
+                        { new MediaGraphNodeInput("signalGateProcessor") }
                     }
                 }},
             };
