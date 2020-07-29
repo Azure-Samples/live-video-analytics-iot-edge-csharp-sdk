@@ -4,9 +4,24 @@ using Microsoft.Azure.Media.LiveVideoAnalytics.Edge.Models;
 
 namespace C2D_Console.Topologies
 {
-//Continuous Video Recording 
+    /// <summary>
+    /// Required modules:
+    ///     1. Live Video Analytics
+    ///     2. RTSP Simulator
+    /// </summary>
     public class Cvr : ITopology
     {
+        /// <summary>
+        /// Continuous Video Recording Topology ingredients
+        ///    1. Parameters: rtspUserName, rtspPassword, rtspUrl
+        ///    2. Sources: `MediaGraphRtspSource`
+        ///    3. Sinks: `MediaGraphAssetSink`
+        ///
+        /// </summary>
+        ///
+        /// <remark>
+        /// For additional info on Media Graph and its pieces, please refer to https://docs.microsoft.com/en-us/azure/media-services/live-video-analytics-edge/media-graph-concept
+        /// </remark>
         public MediaGraphTopology Build()
         {
             return new MediaGraphTopology(
@@ -21,6 +36,7 @@ namespace C2D_Console.Topologies
                 ));
         }
 
+        // Add parameters to Topology
         private List<MediaGraphParameterDeclaration> SetParameters()
         {
             return new List<MediaGraphParameterDeclaration> {
@@ -44,6 +60,7 @@ namespace C2D_Console.Topologies
             };
         }
 
+        // Add sources to Topology
         private List<MediaGraphSource> SetSources()
         {
             return new List<MediaGraphSource> {
@@ -60,6 +77,7 @@ namespace C2D_Console.Topologies
             };
         }
 
+        // Add sinks to Topology
         private List<MediaGraphSink> SetSinks()
         {
             return new List<MediaGraphSink> {

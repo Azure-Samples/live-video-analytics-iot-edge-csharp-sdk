@@ -21,7 +21,7 @@ namespace C2D_Console
         {
             // NOTE: bare way to offer picking one of the available Topologies.
             //       A more powerfull way could discover what's avaliable to offer (i.e. using ITopology).
-            string[] options = { "Cvr", "Motion", "Evr", "Extension"};
+            string[] options = { "Cvr", "Motion", "Evr", "Extension", "Inference with ObjectCounter module"};
 
             // NOTE: present `options` and ask user to pick one.
             //       Built as is for sample purposes, leaving for the reader
@@ -50,6 +50,9 @@ namespace C2D_Console
                     break;
                 case 4:
                     result = new HttpExtension();
+                    break;
+                case 5:
+                    result = new EvrHubAssets();
                     break;
             }
 
@@ -128,6 +131,9 @@ namespace C2D_Console
                 // NOTE: build GraphTopology based on the selected Topology (check how it's done),
                 //       and a GraphInstance.
                 var topology = BuildTopology();
+                // NOTE: different topologies, need a minimum set of modules running. There're 3 deployment manifests
+                //       under /src/edge folder. Each topology has it's minimum module requirements to run commented
+                //       onto them.
                 var instance = BuildInstance(topology.Name, rtspUrl, rtspUserName, rtspPassword);
 
                 // NOTE: obtain the ordered operation set.
