@@ -91,6 +91,18 @@ namespace C2D_Console
                     Name = "rtspPassword",
                     Value = password
                 }}};
+
+            var result = new MediaGraphInstance {
+                Name = $"Sample-Graph-1",
+                Properties = new MediaGraphInstanceProperties {
+                    TopologyName = topology.Name,
+                    Description = "Sample graph description",
+                    Parameters = parameters
+                }
+            };
+
+            PresentParamsProgress(result, topology);
+
             topology.Properties.Parameters.ToList().ForEach(p => {
                 if (! new string[] {"rtspUrl", "rtspUserName", "rtspPassword"}.Contains(p.Name))
                 {
@@ -102,15 +114,39 @@ namespace C2D_Console
                         });
                 }
             });
+
+            PresentParamsProgress(result, topology, true);
             
-            return new MediaGraphInstance {
-                Name = $"Sample-Graph-1",
-                Properties = new MediaGraphInstanceProperties {
-                    TopologyName = topology.Name,
-                    Description = "Sample graph description",
-                    Parameters = parameters
+            return result;
+        }
+
+        static void PresentParamsProgress(MediaGraphInstance graphInstance, MediaGraphTopology topology, bool post = false)
+        {
+            Console.WriteLine(
+                JsonSerializer.Serialize(graphInstance, new JsonSerializerOptions { WriteIndented = true}));
+
+            var orig = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("\nParameter summary for the Graph Instance");
+            Console.WriteLine("--------------------------------------------------------------------------");
+            Console.ForegroundColor = orig;
+
+            foreach(var param in topology.Properties.Parameters)
+            {
+                if (!graphInstance.Properties.Parameters.Any(p => p.Name == param.Name))
+                {
+                    Console.ForegroundColor = (!post)?ConsoleColor.Red:ConsoleColor.Yellow;
+                    Console.WriteLine((!post)?$"\t\"{param.Name}\" not supplied.":$"\t\"{param.Name}\" not supplied. Using default value.");
+                    Console.ForegroundColor = orig;
+                } else {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\t\"{param.Name}\" supplied.");
+                    Console.ForegroundColor = orig;
                 }
-            };
+            }
+
+            Console.Write("\nPress <ENTER> to continue... ");
+            Console.ReadLine();
         }
 
         static string GetInputFor(string parameterName)
