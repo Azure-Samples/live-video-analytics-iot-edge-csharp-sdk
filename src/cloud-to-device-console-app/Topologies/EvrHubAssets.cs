@@ -203,10 +203,7 @@ namespace C2D_Console.Topologies
                 { new MediaGraphAssetSink {
                     Name = "assetSink",
                     AssetNamePattern = "sampleAssetFromEVR-LVAEdge-${System.DateTime}",
-                    // NOTE: Unlike the other MediaGraph* implementations, this property
-                    //       expects a TimeSpan instead of the pseudo-language
-                    SegmentLength = TimeSpan.FromSeconds(30), //"PT30S",
-                    //
+                    SegmentLength = TimeSpan.FromSeconds(30),
                     LocalMediaCacheMaximumSizeMiB = "2048",
                     LocalMediaCachePath = "/var/lib/azuremediaservices/tmp/",
                     Inputs = new List<MediaGraphNodeInput> {

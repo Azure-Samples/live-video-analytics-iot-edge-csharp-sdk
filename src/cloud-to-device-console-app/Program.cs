@@ -101,12 +101,14 @@ namespace C2D_Console
                 }
             };
 
+            // NOTE: screen print for current Graph Instance status
             PresentParamsProgress(result, topology);
 
+            // NOTE: ask for any parameter the user wants to override
             topology.Properties.Parameters.ToList().ForEach(p => {
                 if (! new string[] {"rtspUrl", "rtspUserName", "rtspPassword"}.Contains(p.Name))
                 {
-                    var input = GetInputFor(p.Name);
+                    var input = GetInputFor(p.Name, p.Type);
                     if (!string.IsNullOrWhiteSpace(input))
                         parameters.Add(new MediaGraphParameterDefinition {
                             Name = p.Name,
@@ -115,6 +117,7 @@ namespace C2D_Console
                 }
             });
 
+            // NOTE: screen print for current (and ready to run) Graph Instance
             PresentParamsProgress(result, topology, true);
             
             return result;
@@ -122,8 +125,33 @@ namespace C2D_Console
 
         static void PresentParamsProgress(MediaGraphInstance graphInstance, MediaGraphTopology topology, bool post = false)
         {
+            // NOTE: before printing Graph Instance to screen, we make sure no `SecretString` value reaches the output.
+            var originalParameters = graphInstance.Properties.Parameters;
+
+            var cleanedParameters = new List<MediaGraphParameterDefinition>();
+
+            if (originalParameters?.Count > 0)
+            {
+                graphInstance.Properties.Parameters.ToList().ForEach(gp => {
+                    var tp = topology.Properties.Parameters.FirstOrDefault(tp => tp.Name == gp.Name);
+                    if (tp != null) {
+                        if (tp.Type == MediaGraphParameterType.SecretString)
+                        {
+                            cleanedParameters.Add(new MediaGraphParameterDefinition { Name = gp.Name, Value = "**********" });
+                        } else {
+                            cleanedParameters.Add(new MediaGraphParameterDefinition { Name = gp.Name, Value = gp.Value });
+                        }
+                    }
+                });
+            }
+
+            graphInstance.Properties.Parameters = cleanedParameters;
+
             Console.WriteLine(
-                JsonSerializer.Serialize(graphInstance, new JsonSerializerOptions { WriteIndented = true}));
+                JsonSerializer.Serialize(graphInstance, new JsonSerializerOptions { WriteIndented = true})
+            );
+
+            graphInstance.Properties.Parameters = originalParameters;
 
             var orig = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Cyan;
@@ -131,6 +159,8 @@ namespace C2D_Console
             Console.WriteLine("--------------------------------------------------------------------------");
             Console.ForegroundColor = orig;
 
+            // NOTE: initial run (post = false), informs supplied and not supplied parameters.
+            //       Second run (post = true), informs each parameter status after overriding opt
             foreach(var param in topology.Properties.Parameters)
             {
                 if (!graphInstance.Properties.Parameters.Any(p => p.Name == param.Name))
@@ -145,15 +175,44 @@ namespace C2D_Console
                 }
             }
 
+            if(!post)
+                Console.Write("\nYou'll be offered to supply values for each remaining (red) parameter.");
+            
             Console.Write("\nPress <ENTER> to continue... ");
             Console.ReadLine();
         }
 
-        static string GetInputFor(string parameterName)
+        static string GetInputFor(string parameterName, MediaGraphParameterType parameterType)
         {
+            // NOTE: gets the user's input to override a parameters value. In case the parameter
+            //       is a SecretString, it makes sure no keystroke gets echoed to output.
             Console.WriteLine($"Input the desired value for parameter \"{parameterName}\" and press <ENTER> (leave blank to use default)");
-            var result = Console.ReadLine();
-            return result;
+            if (parameterType != MediaGraphParameterType.SecretString)
+            {
+                var result = Console.ReadLine();
+                return result;
+            } else {
+                var pass = string.Empty;
+                ConsoleKey key;
+                do
+                {
+                    var keyInfo = Console.ReadKey(intercept: true);
+                    key = keyInfo.Key;
+
+                    if (key == ConsoleKey.Backspace && pass.Length > 0)
+                    {
+                        Console.Write("\b \b");
+                        pass = pass[0..^1];
+                    }
+                    else if (!char.IsControl(keyInfo.KeyChar))
+                    {
+                        Console.Write("*");
+                        pass += keyInfo.KeyChar;
+                    }
+                } while (key != ConsoleKey.Enter);
+                Console.Write("\n");
+                return pass;
+            }
         }
 
         static async Task Main(string[] args)
