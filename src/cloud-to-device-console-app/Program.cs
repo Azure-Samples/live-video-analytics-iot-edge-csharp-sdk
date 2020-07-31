@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +22,7 @@ namespace C2D_Console
         {
             // NOTE: bare way to offer picking one of the available Topologies.
             //       A more powerfull way could discover what's avaliable to offer (i.e. using ITopology).
-            string[] options = { "Cvr", "Motion", "Evr", "Extension"};
+            string[] options = { "Cvr", "Motion", "Evr", "Extension", "Inference with ObjectCounter module"};
 
             // NOTE: present `options` and ask user to pick one.
             //       Built as is for sample purposes, leaving for the reader
@@ -33,8 +34,15 @@ namespace C2D_Console
             }
 
             Console.Write($"Pick your topology (1 to {options.Length}) and press <ENTER>: ");
-            // TODO: input validation
-            var option = Int32.Parse(Console.ReadLine());
+            int option;
+            string input = Console.ReadLine();
+
+            while(!Int32.TryParse(input, out option))
+            {
+                Console.WriteLine("Not a valid option, try again...");
+
+                input = Console.ReadLine();
+            }
 
             ITopology result = null;
             switch (option)
@@ -51,6 +59,9 @@ namespace C2D_Console
                 case 4:
                     result = new HttpExtension();
                     break;
+                case 5:
+                    result = new EvrHubAssets();
+                    break;
             }
 
             // NOTE: build and return the topology.
@@ -58,7 +69,7 @@ namespace C2D_Console
         }
 
         static MediaGraphInstance BuildInstance(
-            string topologyName,
+            MediaGraphTopology topology,
             string url,
             string userName,
             string password)
@@ -73,28 +84,142 @@ namespace C2D_Console
                 userName = "testuser";
                 password = "testpassword";    
             }
-            
-            return new MediaGraphInstance {
+
+            var parameters = new List<MediaGraphParameterDefinition>(){
+                { new MediaGraphParameterDefinition {
+                    Name = "rtspUrl",
+                    Value = url
+                }},
+                { new MediaGraphParameterDefinition {
+                    Name = "rtspUserName",
+                    Value = userName
+                }},
+                { new MediaGraphParameterDefinition {
+                    Name = "rtspPassword",
+                    Value = password
+                }}};
+
+            var result = new MediaGraphInstance {
                 Name = $"Sample-Graph-1",
                 Properties = new MediaGraphInstanceProperties {
-                    TopologyName = topologyName,
+                    TopologyName = topology.Name,
                     Description = "Sample graph description",
-                    Parameters = new List<MediaGraphParameterDefinition> {
-                        { new MediaGraphParameterDefinition {
-                            Name = "rtspUrl",
-                            Value = url
-                        }},
-                        { new MediaGraphParameterDefinition {
-                            Name = "rtspUserName",
-                            Value = userName
-                        }},
-                        { new MediaGraphParameterDefinition {
-                            Name = "rtspPassword",
-                            Value = password
-                        }},
-                    }
+                    Parameters = parameters
                 }
             };
+
+            // NOTE: screen print for current Graph Instance status
+            PresentParamsProgress(result, topology);
+
+            // NOTE: ask for any parameter the user wants to override
+            topology.Properties.Parameters.ToList().ForEach(p => {
+                if (! new string[] {"rtspUrl", "rtspUserName", "rtspPassword"}.Contains(p.Name))
+                {
+                    var input = GetInputFor(p.Name, p.Type);
+                    if (!string.IsNullOrWhiteSpace(input))
+                        parameters.Add(new MediaGraphParameterDefinition {
+                            Name = p.Name,
+                            Value = input
+                        });
+                }
+            });
+
+            // NOTE: screen print for current (and ready to run) Graph Instance
+            PresentParamsProgress(result, topology, true);
+            
+            return result;
+        }
+
+        static void PresentParamsProgress(MediaGraphInstance graphInstance, MediaGraphTopology topology, bool post = false)
+        {
+            // NOTE: before printing Graph Instance to screen, we make sure no `SecretString` value reaches the output.
+            var originalParameters = graphInstance.Properties.Parameters;
+
+            var cleanedParameters = new List<MediaGraphParameterDefinition>();
+
+            if (originalParameters?.Count > 0)
+            {
+                graphInstance.Properties.Parameters.ToList().ForEach(gp => {
+                    var tp = topology.Properties.Parameters.FirstOrDefault(tp => tp.Name == gp.Name);
+                    if (tp != null) {
+                        if (tp.Type == MediaGraphParameterType.SecretString)
+                        {
+                            cleanedParameters.Add(new MediaGraphParameterDefinition { Name = gp.Name, Value = "**********" });
+                        } else {
+                            cleanedParameters.Add(new MediaGraphParameterDefinition { Name = gp.Name, Value = gp.Value });
+                        }
+                    }
+                });
+            }
+
+            graphInstance.Properties.Parameters = cleanedParameters;
+
+            Console.WriteLine(
+                JsonSerializer.Serialize(graphInstance, new JsonSerializerOptions { WriteIndented = true})
+            );
+
+            graphInstance.Properties.Parameters = originalParameters;
+
+            var orig = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("\nParameter summary for the Graph Instance");
+            Console.WriteLine("--------------------------------------------------------------------------");
+            Console.ForegroundColor = orig;
+
+            // NOTE: initial run (post = false), informs supplied and not supplied parameters.
+            //       Second run (post = true), informs each parameter status after overriding opt
+            foreach(var param in topology.Properties.Parameters)
+            {
+                if (!graphInstance.Properties.Parameters.Any(p => p.Name == param.Name))
+                {
+                    Console.ForegroundColor = (!post)?ConsoleColor.Red:ConsoleColor.Yellow;
+                    Console.WriteLine((!post)?$"\t\"{param.Name}\" not supplied.":$"\t\"{param.Name}\" not supplied. Using default value.");
+                    Console.ForegroundColor = orig;
+                } else {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\t\"{param.Name}\" supplied.");
+                    Console.ForegroundColor = orig;
+                }
+            }
+
+            if(!post)
+                Console.Write("\nYou'll be offered to supply values for each remaining (red) parameter.");
+            
+            Console.Write("\nPress <ENTER> to continue... ");
+            Console.ReadLine();
+        }
+
+        static string GetInputFor(string parameterName, MediaGraphParameterType parameterType)
+        {
+            // NOTE: gets the user's input to override a parameters value. In case the parameter
+            //       is a SecretString, it makes sure no keystroke gets echoed to output.
+            Console.WriteLine($"Input the desired value for parameter \"{parameterName}\" and press <ENTER> (leave blank to use default)");
+            if (parameterType != MediaGraphParameterType.SecretString)
+            {
+                var result = Console.ReadLine();
+                return result;
+            } else {
+                var pass = string.Empty;
+                ConsoleKey key;
+                do
+                {
+                    var keyInfo = Console.ReadKey(intercept: true);
+                    key = keyInfo.Key;
+
+                    if (key == ConsoleKey.Backspace && pass.Length > 0)
+                    {
+                        Console.Write("\b \b");
+                        pass = pass[0..^1];
+                    }
+                    else if (!char.IsControl(keyInfo.KeyChar))
+                    {
+                        Console.Write("*");
+                        pass += keyInfo.KeyChar;
+                    }
+                } while (key != ConsoleKey.Enter);
+                Console.Write("\n");
+                return pass;
+            }
         }
 
         static async Task Main(string[] args)
@@ -128,7 +253,10 @@ namespace C2D_Console
                 // NOTE: build GraphTopology based on the selected Topology (check how it's done),
                 //       and a GraphInstance.
                 var topology = BuildTopology();
-                var instance = BuildInstance(topology.Name, rtspUrl, rtspUserName, rtspPassword);
+                // NOTE: different topologies, need a minimum set of modules running. There're 3 deployment manifests
+                //       under /src/edge folder. Each topology has it's minimum module requirements to run commented
+                //       onto them.
+                var instance = BuildInstance(topology, rtspUrl, rtspUserName, rtspPassword);
 
                 // NOTE: obtain the ordered operation set.
                 var steps = Orchestrate(topology, instance);

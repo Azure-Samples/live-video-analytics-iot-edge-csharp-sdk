@@ -26,7 +26,7 @@ This repository contains core C# SDK code to use Live Video Analytics on IoT Edg
 
 The 'src' folder contains three sub-folders
 
-* **cloud-to-device-console-app** - This folder contains a dotnet core console app that enables you to invoke direct methods of Live Video Analytics on IoT Edge module using SDK methods.
+* **cloud-to-device-console-app** - This folder contains a dotnet core console app that enables you to invoke direct methods of Live Video Analytics on IoT Edge module, by picking one of the available topologies and invoking it, executing a series of steps scripted into code (using [Live Video Analytics SDK](https://github.com/Azure/azure-sdk-for-net/tree/Microsoft.Azure.Media.LiveVideoAnalytics.Edge_1.0.0-preview.1/sdk/mediaservices/Microsoft.Azure.Media.LiveVideoAnalytics.Edge).
 * **edge** - This folder has a few IoT Edge deployment manifest templates, along with sample code for an IoT Edge module (under 'modules' folder) that can be used in conjunction with the Live Video Analytics on IoT Edge module.
 * **ams-asset-player** - This folder contains a ASP dotnet core app that showcases how you can playback assets recorded by Live Video Analytics on IoT Edge (in the Azure Media Services account referenced in the module twin properties).
 

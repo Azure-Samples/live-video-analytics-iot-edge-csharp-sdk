@@ -4,17 +4,20 @@ using Microsoft.Azure.Media.LiveVideoAnalytics.Edge.Models;
 
 namespace C2D_Console.Topologies
 {
+//Connect to inferencing using HTTP extension and then, to an external module using IoT Hub routing capabilities
+    
     /// <summary>
     /// Required modules:
     ///     1. Live Video Analytics
     ///     2. RTSP Simulator
     ///     3. Inferencing (i.e. yolov3) (if runs locally)
+    ///     4. Object Counter custom module (/src/edge)
     /// </summary>
-    public class HttpExtension : ITopology
+    public class EvrHubAssets : ITopology
     {
         /// <summary>
-        /// Inferencing connected to external AI service through HTTP Topology ingredients
-        ///    1. Parameters: rtspUserName, rtspPassword, rtspUrl, inferencingUrl, inferencingUserName, inferencingPassword, imageEncoding, imageScaleMode, frameWidth, frameHeight, frameRate
+        /// External Inferencing and Analysis Topology ingredients
+        ///    1. Parameters: rtspUserName, rtspPassword, rtspUrl, hubSourceInput, inferencingUrl, inferencingUserName, inferencingPassword, imageEncoding, imageScaleMode, frameWidth, frameHeight, hubSinkOutputName
         ///    2. Sources: `MediaGraphRtspSource`
         ///    3. Processors: `MediaGraphFrameRateFilterProcessor`, `MediaGraphHttpExtension`
         ///    4. Sinks: `MediaGraphIoTHubMessageSink`
@@ -61,6 +64,12 @@ namespace C2D_Console.Topologies
                     Description = "rtsp Url"
                 }},
                 { new MediaGraphParameterDeclaration {
+                    Name = "hubSourceInput",
+                    Type = MediaGraphParameterType.String,
+                    Description = "input name for hub source",
+                    DefaultProperty = "recordingTrigger"
+                }},
+                { new MediaGraphParameterDeclaration {
                     Name = "inferencingUrl",
                     Type = MediaGraphParameterType.String,
                     Description = "inferencing Url",
@@ -103,10 +112,10 @@ namespace C2D_Console.Topologies
                     DefaultProperty = "416"
                 }},
                 { new MediaGraphParameterDeclaration {
-                    Name = "frameRate",
+                    Name = "hubSinkOutputName",
                     Type = MediaGraphParameterType.String,
-                    Description = "Rate of the frames per second to be received from LVA.",
-                    DefaultProperty = "2"
+                    Description = "hub sink output name",
+                    DefaultProperty = "detectedObjects"
                 }},
             };
         }
@@ -125,6 +134,10 @@ namespace C2D_Console.Topologies
                         }
                     }
                 }},
+                { new MediaGraphIoTHubMessageSource {
+                    Name = "iotMessageSource",
+                    HubInputName = "${hubSourceInput}"
+                }},
             };
         }
 
@@ -132,15 +145,26 @@ namespace C2D_Console.Topologies
         private List<MediaGraphProcessor> SetProcessors()
         {
             return new List<MediaGraphProcessor> {
+                { new MediaGraphSignalGateProcessor {
+                    Name = "signalGateProcessor",
+                    Inputs = new List<MediaGraphNodeInput> {
+                        { new MediaGraphNodeInput("iotMessageSource") },
+                        { new MediaGraphNodeInput("rtspSource") }
+                    },
+                    ActivationEvaluationWindow = "PT1S",
+                    ActivationSignalOffset = "-PT5S",
+                    MinimumActivationTime = "PT30S",
+                    MaximumActivationTime = "PT30S"
+                }},
                 { new MediaGraphFrameRateFilterProcessor {
                     Name = "frameRateFilter",
+                    MaximumFps = "1.0",
                     Inputs = new List<MediaGraphNodeInput> {
                         { new MediaGraphNodeInput("rtspSource") }
                     },
-                    MaximumFps = "${frameRate}"
                 }},
                 { new MediaGraphHttpExtension {
-                    Name = "httpExtension",
+                    Name = "inferenceClient",
                     Endpoint = new MediaGraphUnsecuredEndpoint {
                         Url = "${inferencingUrl}",
                         Credentials = new MediaGraphUsernamePasswordCredentials {
@@ -171,9 +195,19 @@ namespace C2D_Console.Topologies
             return new List<MediaGraphSink> {
                 { new MediaGraphIoTHubMessageSink {
                     Name = "hubSink",
-                    HubOutputName = "inferenceOutput",
+                    HubOutputName = "${hubSinkOutputName}",
                     Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("httpExtension") }
+                        { new MediaGraphNodeInput("inferenceClient") }
+                    }
+                }},
+                { new MediaGraphAssetSink {
+                    Name = "assetSink",
+                    AssetNamePattern = "sampleAssetFromEVR-LVAEdge-${System.DateTime}",
+                    SegmentLength = TimeSpan.FromSeconds(30),
+                    LocalMediaCacheMaximumSizeMiB = "2048",
+                    LocalMediaCachePath = "/var/lib/azuremediaservices/tmp/",
+                    Inputs = new List<MediaGraphNodeInput> {
+                        { new MediaGraphNodeInput("signalGateProcessor") }
                     }
                 }},
             };
