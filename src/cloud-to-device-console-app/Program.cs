@@ -34,8 +34,15 @@ namespace C2D_Console
             }
 
             Console.Write($"Pick your topology (1 to {options.Length}) and press <ENTER>: ");
-            // TODO: input validation
-            var option = Int32.Parse(Console.ReadLine());
+            int option;
+            string input = Console.ReadLine();
+
+            while(!Int32.TryParse(input, out option))
+            {
+                Console.WriteLine("Not a valid option, try again...");
+
+                input = Console.ReadLine();
+            }
 
             ITopology result = null;
             switch (option)
