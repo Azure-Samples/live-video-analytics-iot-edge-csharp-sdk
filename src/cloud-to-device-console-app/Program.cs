@@ -287,23 +287,23 @@ namespace C2D_Console
             // NOTE: prepares the ordered script to be followed. Each one modeled after a `Step` class.
             return new List<Step>() {
                     new Step {
-                        Enabled = true,
+                        Enabled = false,
                         Name = "GraphTopologyList",
                         Op = () => edgeClient.GraphTopologyListAsync()
                             .ContinueWith(t => Console.WriteLine(
                                 JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
                     new Step {
-                        Enabled = true,
+                        Enabled = false,
                         Name = "WaitForInput",
                         Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
                     new Step {
-                        Enabled = true,
+                        Enabled = false,
                         Name = "GraphInstanceList",
                         Op = () => edgeClient.GraphInstanceListAsync()
                             .ContinueWith(t => Console.WriteLine(
                                 JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
                     new Step {
-                        Enabled = true,
+                        Enabled = false,
                         Name = "WaitForInput",
                         Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
                     new Step {
