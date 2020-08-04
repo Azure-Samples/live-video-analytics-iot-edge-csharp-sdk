@@ -43,7 +43,7 @@ This directory contains a dotnet core sample app that would enable you to invoke
 
 ## Setup
 
-### 1. Create appsettings.json file
+### 1. Fill keys on appsettings.json file
 
 Create a file named **appsettings.json** in this folder. Add the following text and provide values for all parameters.
 
