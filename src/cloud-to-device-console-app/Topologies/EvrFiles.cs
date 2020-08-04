@@ -26,7 +26,7 @@ namespace C2D_Console.Topologies
         public MediaGraphTopology Build()
         {
             return new MediaGraphTopology(
-                "EVRToFilesOnMotionDetection",
+                "EventsToFilesMotionDetection",
                 null,
                 null,
                 new MediaGraphTopologyProperties(
