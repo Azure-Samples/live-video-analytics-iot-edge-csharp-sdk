@@ -6,12 +6,12 @@ products:
   - azure
   - azure-media-services
   - azure-live-video-analytics
-description: "This repo contains core functionality that shows how to use the Live Video Analytics on IoT Edge module to analyze live video using AI modules of your choice and optionally record video on the edge device or in the cloud."  
+description: "This repo contains functionality that shows how to use the Live Video Analytics on IoT Edge module to analyze live video using AI modules of your choice and optionally record video on the edge device or in the cloud."  
 ---
 
 # Live Video Analytics on IoT Edge  
 
-This repository contains core C# SDK code to use Live Video Analytics on IoT Edge
+This repository contains C# SDK code to use Live Video Analytics on IoT Edge
 
 ## Contents
 
