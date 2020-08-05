@@ -25,7 +25,7 @@ namespace C2D_Console.Topologies
         public MediaGraphTopology Build()
         {
             return new MediaGraphTopology(
-                "CVRToAMSAsset",
+                "ContinuousRecording",
                 null,
                 null,
                 new MediaGraphTopologyProperties(
