@@ -79,17 +79,6 @@ namespace C2D_Console
             string userName,
             string password)
         {
-            // NOTE: use RTSP simulator values if not provided. Built as is
-            //       for demo purposes only.
-            if (string.IsNullOrWhiteSpace(url)
-                || string.IsNullOrWhiteSpace(userName)
-                || string.IsNullOrWhiteSpace(password) )
-            {
-                url = "rtsp://rtspsim:554/media/camera-300s.mkv";
-                userName = "testuser";
-                password = "testpassword";    
-            }
-
             var parameters = new List<MediaGraphParameterDefinition>(){
                 { new MediaGraphParameterDefinition {
                     Name = "rtspUrl",
