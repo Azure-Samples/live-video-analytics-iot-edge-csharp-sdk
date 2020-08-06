@@ -25,7 +25,7 @@ namespace C2D_Console
             string[] options = {
                 "Continuous Video Recording",
                 "Motion Detection",
-                "Event Based Video Recording to AMS Asset",
+                "Event Based Video Recording to edge device",
                 "Inference using HTTP Extension",
                 "Inference using ObjectCounter module"};
 
