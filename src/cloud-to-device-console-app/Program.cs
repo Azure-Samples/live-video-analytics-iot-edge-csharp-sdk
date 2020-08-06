@@ -103,28 +103,28 @@ namespace C2D_Console
             };
 
             // NOTE: screen print for current Graph Instance status
-            PresentParamsProgress(result, topology);
+            if (PresentParamsProgress(result, topology))
+            {
+                // NOTE: ask for any parameter the user wants to override
+                topology.Properties.Parameters.ToList().ForEach(p => {
+                    if (! new string[] {"rtspUrl", "rtspUserName", "rtspPassword"}.Contains(p.Name))
+                    {
+                        var input = GetInputFor(p.Name, p.Type);
+                        if (!string.IsNullOrWhiteSpace(input))
+                            parameters.Add(new MediaGraphParameterDefinition {
+                                Name = p.Name,
+                                Value = input
+                            });
+                    }
+                });
 
-            // NOTE: ask for any parameter the user wants to override
-            topology.Properties.Parameters.ToList().ForEach(p => {
-                if (! new string[] {"rtspUrl", "rtspUserName", "rtspPassword"}.Contains(p.Name))
-                {
-                    var input = GetInputFor(p.Name, p.Type);
-                    if (!string.IsNullOrWhiteSpace(input))
-                        parameters.Add(new MediaGraphParameterDefinition {
-                            Name = p.Name,
-                            Value = input
-                        });
-                }
-            });
-
-            // NOTE: screen print for current (and ready to run) Graph Instance
-            PresentParamsProgress(result, topology, true);
-            
+                // NOTE: screen print for current (and ready to run) Graph Instance
+                PresentParamsProgress(result, topology, true);
+            }
             return result;
         }
 
-        static void PresentParamsProgress(MediaGraphInstance graphInstance, MediaGraphTopology topology, bool post = false)
+        static bool PresentParamsProgress(MediaGraphInstance graphInstance, MediaGraphTopology topology, bool post = false)
         {
             // NOTE: before printing Graph Instance to screen, we make sure no `SecretString` value reaches the output.
             var originalParameters = graphInstance.Properties.Parameters;
@@ -162,12 +162,14 @@ namespace C2D_Console
 
             // NOTE: initial run (post = false), informs supplied and not supplied parameters.
             //       Second run (post = true), informs each parameter status after overriding opt
+            var containsNotSuppliedParams = false;
             foreach(var param in topology.Properties.Parameters)
             {
                 if (!graphInstance.Properties.Parameters.Any(p => p.Name == param.Name))
                 {
                     Console.ForegroundColor = (!post)?ConsoleColor.Red:ConsoleColor.Yellow;
                     Console.WriteLine((!post)?$"\t\"{param.Name}\" not supplied.":$"\t\"{param.Name}\" not supplied. Using default value.");
+                    containsNotSuppliedParams = true;
                     Console.ForegroundColor = orig;
                 } else {
                     Console.ForegroundColor = ConsoleColor.Green;
@@ -176,11 +178,13 @@ namespace C2D_Console
                 }
             }
 
-            if(!post)
+            if(!post && containsNotSuppliedParams)
                 Console.Write("\nYou'll be offered to supply values for each remaining (red) parameter.");
             
             Console.Write("\nPress <ENTER> to continue... ");
             Console.ReadLine();
+
+            return containsNotSuppliedParams;
         }
 
         static string GetInputFor(string parameterName, MediaGraphParameterType parameterType)
