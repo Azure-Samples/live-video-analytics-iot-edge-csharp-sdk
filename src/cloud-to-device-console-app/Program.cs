@@ -22,7 +22,12 @@ namespace C2D_Console
         {
             // NOTE: bare way to offer picking one of the available Topologies.
             //       A more powerfull way could discover what's avaliable to offer (i.e. using ITopology).
-            string[] options = { "Cvr", "Motion", "Evr", "Extension", "Inference with ObjectCounter module"};
+            string[] options = {
+                "Continuous Video Recording",
+                "Motion Detection",
+                "Event Based Video Recording to AMS Asset",
+                "Inference using HTTP Extension",
+                "Inference using ObjectCounter module"};
 
             // NOTE: present `options` and ask user to pick one.
             //       Built as is for sample purposes, leaving for the reader
