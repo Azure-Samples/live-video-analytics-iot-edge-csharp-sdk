@@ -1,6 +1,6 @@
+using Azure.Media.Analytics.Edge.Models;
 using System;
 using System.Collections.Generic;
-using Microsoft.Azure.Media.LiveVideoAnalytics.Edge.Models;
 
 namespace C2D_Console.Topologies
 {
@@ -25,86 +25,85 @@ namespace C2D_Console.Topologies
         /// </remark>
         public MediaGraphTopology Build()
         {
-            return new MediaGraphTopology(
-                "MotionDetection",
-                null,
-                null,
-                new MediaGraphTopologyProperties(
-                    "Analyzing live video to detect motion and emit events",
-                    parameters: SetParameters(),
-                    sources: SetSources(),
-                    processors: SetProcessors(),
-                    sinks: SetSinks()
-                ));
+            var graphProperties = new MediaGraphTopologyProperties
+            {
+                Description = "Analyzing live video to detect motion and emit events",
+            };
+
+            SetParameters(graphProperties);
+            SetProcessors(graphProperties);
+            SetSources(graphProperties);
+            SetSinks(graphProperties);
+
+            return new MediaGraphTopology("MotionDetection")
+            {
+                Properties = graphProperties
+            };
         }
 
         // Add parameters to Topology
-        private List<MediaGraphParameterDeclaration> SetParameters()
+        private void SetParameters(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphParameterDeclaration> {
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUserName",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp source user name.",
-                    DefaultProperty = "dummyUserName"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspPassword",
-                    Type = MediaGraphParameterType.SecretString,
-                    Description = "rtsp source password.",
-                    DefaultProperty = "dummyPassword"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUrl",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp Url"
-                }},
-            };
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUserName", MediaGraphParameterType.String)
+            {
+                Description = "rtsp source user name.",
+                Default = "dummyUserName"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspPassword", MediaGraphParameterType.SecretString)
+            {
+                Description = "rtsp source password.",
+                Default = "dummyPassword"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUrl", MediaGraphParameterType.String)
+            {
+                Description = "rtsp Url"
+            });
         }
 
         // Add sources to Topology
-        private List<MediaGraphSource> SetSources()
+        private void SetSources(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSource> {
-                { new MediaGraphRtspSource {
-                    Name = "rtspSource",
-                    Endpoint = new MediaGraphUnsecuredEndpoint {
-                        Url = "${rtspUrl}",
-                        Credentials = new MediaGraphUsernamePasswordCredentials {
-                            Username = "${rtspUserName}",
-                            Password = "${rtspPassword}"
-                        }
-                    }
-                }},
-            };
+            graphProperties.Sources.Add(new MediaGraphRtspSource("rtspSource", new MediaGraphUnsecuredEndpoint("${rtspUrl}")
+            {
+                Credentials = new MediaGraphUsernamePasswordCredentials("${rtspUserName}")
+                {
+                    Password = "${rtspPassword}"
+                }
+            })
+            );
         }
 
         // Add processors to Topology
-        private List<MediaGraphProcessor> SetProcessors()
+        private void SetProcessors(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphProcessor> {
-                { new MediaGraphMotionDetectionProcessor {
-                    Name = "motionDetection",
-                    Sensitivity = "medium",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("rtspSource") }
+
+            graphProperties.Processors.Add(
+                new MediaGraphMotionDetectionProcessor(
+                    "motionDetection",
+                    new List<MediaGraphNodeInput> {
+                        new MediaGraphNodeInput() { NodeName = "rtspSource" }
                     }
-                }},
-            };
+                )
+                {
+                    Sensitivity = "medium"
+                }
+            );
         }
 
         // Add sinks to Topology
-        private List<MediaGraphSink> SetSinks()
+        private void SetSinks(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSink> {
-                { new MediaGraphIoTHubMessageSink {
-                    Name = "hubSink",
-                    HubOutputName = "inferenceOutput",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("motionDetection") }
-                    }
-                }},
+            var hubGraphNodeInput = new List<MediaGraphNodeInput>
+            {
+                { new MediaGraphNodeInput{NodeName = "inferenceClient"} }
             };
+
+            graphProperties.Sinks.Add(new MediaGraphIoTHubMessageSink(
+                "hubSink",
+                hubGraphNodeInput,
+                "${hubSinkOutputName}"
+                )
+            );
         }
     }
 }

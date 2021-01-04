@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Azure.Media.LiveVideoAnalytics.Edge.Models;
+using Azure.Media.Analytics.Edge.Models;
 
 namespace C2D_Console.Topologies
 {
@@ -24,74 +24,66 @@ namespace C2D_Console.Topologies
         /// </remark>
         public MediaGraphTopology Build()
         {
-            return new MediaGraphTopology(
-                "ContinuousRecording",
-                null,
-                null,
-                new MediaGraphTopologyProperties(
-                    "Continuous video recording to an Azure Media Services Asset",
-                    parameters: SetParameters(),
-                    sources: SetSources(),
-                    sinks: SetSinks()
-                ));
+            var graphProperties = new MediaGraphTopologyProperties
+            {
+                Description = "Continuous video recording to an Azure Media Services Asset",
+            };
+
+            SetParameters(graphProperties);
+            SetSources(graphProperties);
+            SetSinks(graphProperties);
+
+            return new MediaGraphTopology("ContinuousRecording")
+            {
+                Properties = graphProperties
+            };
         }
 
         // Add parameters to Topology
-        private List<MediaGraphParameterDeclaration> SetParameters()
+        private void SetParameters(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphParameterDeclaration> {
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUserName",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp source user name.",
-                    DefaultProperty = "dummyUserName"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspPassword",
-                    Type = MediaGraphParameterType.SecretString,
-                    Description = "rtsp source password.",
-                    DefaultProperty = "dummyPassword"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUrl",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp Url"
-                }},
-            };
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUserName", MediaGraphParameterType.String)
+            {
+                Description = "rtsp source user name.",
+                Default = "dummyUserName"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspPassword", MediaGraphParameterType.SecretString)
+            {
+                Description = "rtsp source password.",
+                Default = "dummyPassword"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUrl", MediaGraphParameterType.String)
+            {
+                Description = "rtsp Url"
+            });
         }
 
         // Add sources to Topology
-        private List<MediaGraphSource> SetSources()
+        private void SetSources(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSource> {
-                { new MediaGraphRtspSource {
-                    Name = "rtspSource",
-                    Endpoint = new MediaGraphUnsecuredEndpoint {
-                        Url = "${rtspUrl}",
-                        Credentials = new MediaGraphUsernamePasswordCredentials {
-                            Username = "${rtspUserName}",
-                            Password = "${rtspPassword}"
-                        }
-                    }
-                }},
-            };
+            graphProperties.Sources.Add(new MediaGraphRtspSource("rtspSource", new MediaGraphUnsecuredEndpoint("${rtspUrl}")
+            {
+                Credentials = new MediaGraphUsernamePasswordCredentials("${rtspUserName}")
+                {
+                    Password = "${rtspPassword}"
+                }
+            })
+            );
         }
 
         // Add sinks to Topology
-        private List<MediaGraphSink> SetSinks()
+        private void SetSinks(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSink> {
-                { new MediaGraphAssetSink {
-                    Name = "assetSink",
-                    AssetNamePattern = "sampleAsset-${System.GraphTopologyName}-${System.GraphInstanceName}",
-                    SegmentLength = TimeSpan.FromSeconds(30),
-                    LocalMediaCacheMaximumSizeMiB = "2048",
-                    LocalMediaCachePath = "/var/lib/azuremediaservices/tmp/",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("rtspSource") }
-                    }
-                }},
+            var graphNodeInput = new List<MediaGraphNodeInput>
+            {
+                { new MediaGraphNodeInput{NodeName = "rtspSource"} }
             };
+            var cachePath = "/var/lib/azuremediaservices/tmp/";
+            var cacheMaxSize = "2048";
+            graphProperties.Sinks.Add(new MediaGraphAssetSink("assetSink", graphNodeInput, "sampleAsset-${System.GraphTopologyName}-${System.GraphInstanceName}", cachePath, cacheMaxSize)
+            {
+                SegmentLength = System.Xml.XmlConvert.ToString(TimeSpan.FromSeconds(30)),
+            });
         }
     }
 }

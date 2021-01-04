@@ -1,4 +1,4 @@
-using Microsoft.Azure.Media.LiveVideoAnalytics.Edge.Models;
+using Azure.Media.Analytics.Edge.Models;
 
 namespace C2D_Console.Topologies
 {
