@@ -235,7 +235,7 @@ namespace C2D_Console
 
                 deviceId = appSettings["deviceId"];
                 moduleId = appSettings["moduleId"];
-                edgeClient = ServiceClient.CreateFromConnectionString(appSettings["ioTDeviceConnectionString"]);
+                edgeClient = ServiceClient.CreateFromConnectionString(appSettings["IoThubConnectionString"]);
     
                 // NOTE: build GraphTopology based on the selected Topology (check how it's done),
                 //       and a GraphInstance.
@@ -269,11 +269,10 @@ namespace C2D_Console
             }
         }
 
-        static Task<CloudToDeviceMethodResult> CreateStepOperation(string operationName, MediaGraphTopology topology = null, MediaGraphInstance instance = null)
+        static Task<CloudToDeviceMethodResult> CreateStepOperation(MethodRequest request)
         {
-            var setGraphRequest = new MediaGraphTopologySetRequest(topology);
-            var directMethod = new CloudToDeviceMethod(operationName);
-            directMethod.SetPayloadJson(setGraphRequest.GetPayloadAsJson());
+            var directMethod = new CloudToDeviceMethod(request.MethodName);
+            directMethod.SetPayloadJson(request.GetPayloadAsJson());
 
             return edgeClient.InvokeDeviceMethodAsync(deviceId, moduleId, directMethod);
         }
@@ -282,46 +281,46 @@ namespace C2D_Console
         {
             // NOTE: prepares the ordered script to be followed. Each one modeled after a `Step` class.
             return new List<Step>() {
-                    new Step {
-                        Enabled = false,
-                        Name = "GraphTopologyList",
-                        Op = () => CreateStepOperation("GraphTopologyList", topology, instance)
-                            .ContinueWith(t => Console.WriteLine(
-                                JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
-                    new Step {
-                        Enabled = false,
-                        Name = "WaitForInput",
-                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
-                    new Step {
-                        Enabled = false,
-                        Name = "GraphInstanceList",
-                        Op = () => CreateStepOperation("GraphInstanceList", topology, instance)
-                            .ContinueWith(t => Console.WriteLine(
-                                JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
-                    new Step {
-                        Enabled = false,
-                        Name = "WaitForInput",
-                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
+                    //new Step {
+                    //    Enabled = false,
+                    //    Name = "GraphTopologyList",
+                    //    Op = () => CreateStepOperation(new MediaGraphTopologyListRequest())
+                    //        .ContinueWith(t => Console.WriteLine(
+                    //            JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
+                    //new Step {
+                    //    Enabled = false,
+                    //    Name = "WaitForInput",
+                    //    Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
+                    //new Step {
+                    //    Enabled = false,
+                    //    Name = "GraphInstanceList",
+                    //    Op = () => CreateStepOperation(new MediaGraphInstanceListRequest())
+                    //        .ContinueWith(t => Console.WriteLine(
+                    //            JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
+                    //new Step {
+                    //    Enabled = false,
+                    //    Name = "WaitForInput",
+                    //    Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
                     new Step {
                         Enabled = true,
                         Name = "GraphTopologySet",
-                        Op = () => CreateStepOperation("GraphTopologySet", topology, instance)
+                        Op = () => CreateStepOperation(new MediaGraphTopologySetRequest(topology))
                             .ContinueWith(t => Console.WriteLine(
                                 JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceSet",
-                        Op = () => CreateStepOperation("GraphInstanceSet", topology, instance)
+                        Op = () => CreateStepOperation(new MediaGraphInstanceSetRequest(instance))
                             .ContinueWith(t => Console.WriteLine(
                                 JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceActivate",
-                        Op = () => CreateStepOperation("GraphInstanceActivate", topology, instance) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceActivateRequest(instance.Name)) },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceList",
-                        Op = () => CreateStepOperation("GraphInstanceList", topology, instance)
+                        Op = () => CreateStepOperation(new MediaGraphInstanceListRequest())
                             .ContinueWith(t => Console.WriteLine(
                                 JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
                     new Step {
@@ -331,15 +330,15 @@ namespace C2D_Console
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceDeactivate",
-                        Op = () => CreateStepOperation("GraphInstanceDeactivate", topology, instance) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceDeActivateRequest(instance.Name)) },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceDelete",
-                        Op = () => CreateStepOperation("GraphInstanceDelete", topology, instance) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceDeleteRequest(instance.Name)) },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceList",
-                        Op = () => CreateStepOperation("GraphInstanceList", topology, instance)
+                        Op = () => CreateStepOperation(new MediaGraphInstanceListRequest())
                             .ContinueWith(t => Console.WriteLine(
                                 JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
                     new Step {
@@ -349,7 +348,7 @@ namespace C2D_Console
                     new Step {
                         Enabled = true,
                         Name = "GraphTopologyDelete",
-                        Op = () => CreateStepOperation("GraphTopologyDelete", topology, instance) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceDeleteRequest(topology.Name)) },
                     new Step {
                         Enabled = true,
                         Name = "WaitForInput",
@@ -357,7 +356,7 @@ namespace C2D_Console
                     new Step {
                         Enabled = true,
                         Name = "GraphTopologyList",
-                        Op = () => CreateStepOperation("GraphTopologyList", topology, instance)
+                        Op = () => CreateStepOperation(new MediaGraphTopologyListRequest())
                             .ContinueWith(t => Console.WriteLine(
                                 JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
                     new Step {
