@@ -117,38 +117,41 @@ namespace C2D_Console
         static bool PresentParamsProgress(MediaGraphInstance graphInstance, MediaGraphTopology topology, bool post = false)
         {
             // NOTE: before printing Graph Instance to screen, we make sure no `SecretString` value reaches the output.
-            var originalParameters = graphInstance.Properties.Parameters;
-
             var cleanedParameters = new List<MediaGraphParameterDefinition>();
 
-            if (originalParameters?.Count > 0)
+            // Mask sensitive data
+            if (graphInstance.Properties.Parameters?.Count > 0)
             {
                 graphInstance.Properties.Parameters.ToList().ForEach(gp => {
                     var tp = topology.Properties.Parameters.FirstOrDefault(tp => tp.Name == gp.Name);
                     if (tp != null) {
                         if (tp.Type == MediaGraphParameterType.SecretString)
                         {
-                            cleanedParameters.Add(new MediaGraphParameterDefinition(gp.Name, "**********"));
-                        } else {
                             cleanedParameters.Add(new MediaGraphParameterDefinition(gp.Name, gp.Value));
+                            gp.Value = "**********";
                         }
                     }
                 });
             }
 
-            //graphInstance.Properties.Parameters = cleanedParameters;
-
             Console.WriteLine(
                 JsonSerializer.Serialize(graphInstance, new JsonSerializerOptions { WriteIndented = true})
             );
-
-           // graphInstance.Properties.Parameters = originalParameters;
 
             var orig = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("\nParameter summary for the Graph Instance");
             Console.WriteLine("--------------------------------------------------------------------------");
             Console.ForegroundColor = orig;
+
+            // Remove mask
+            cleanedParameters.ForEach(cleanParameter => {
+                var parameter = graphInstance.Properties.Parameters.FirstOrDefault(originalParam => originalParam.Name == cleanParameter.Name);
+                if (parameter.Value != null)
+                {
+                    parameter.Value = cleanParameter.Value;
+                }
+            });
 
             // NOTE: initial run (post = false), informs supplied and not supplied parameters.
             //       Second run (post = true), informs each parameter status after overriding opt
@@ -269,100 +272,110 @@ namespace C2D_Console
             }
         }
 
-        static Task<CloudToDeviceMethodResult> CreateStepOperation(MethodRequest request)
+        static async Task CreateStepOperation(MethodRequest request)
         {
             var directMethod = new CloudToDeviceMethod(request.MethodName);
             directMethod.SetPayloadJson(request.GetPayloadAsJson());
 
-            return edgeClient.InvokeDeviceMethodAsync(deviceId, moduleId, directMethod);
+            var result = await edgeClient.InvokeDeviceMethodAsync(deviceId, moduleId, directMethod);
+
+            if (result.Status < 400)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                await PrintMessage(result.GetPayloadAsJson(), ConsoleColor.Red);
+            }
         }
 
         static List<Step> Orchestrate(MediaGraphTopology topology, MediaGraphInstance instance)
         {
             // NOTE: prepares the ordered script to be followed. Each one modeled after a `Step` class.
             return new List<Step>() {
-                    //new Step {
-                    //    Enabled = false,
-                    //    Name = "GraphTopologyList",
-                    //    Op = () => CreateStepOperation(new MediaGraphTopologyListRequest())
-                    //        .ContinueWith(t => Console.WriteLine(
-                    //            JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
-                    //new Step {
-                    //    Enabled = false,
-                    //    Name = "WaitForInput",
-                    //    Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
-                    //new Step {
-                    //    Enabled = false,
-                    //    Name = "GraphInstanceList",
-                    //    Op = () => CreateStepOperation(new MediaGraphInstanceListRequest())
-                    //        .ContinueWith(t => Console.WriteLine(
-                    //            JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
-                    //new Step {
-                    //    Enabled = false,
-                    //    Name = "WaitForInput",
-                    //    Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
+                    new Step {
+                        Enabled = false,
+                        Name = "GraphTopologyList",
+                        Op = () => CreateStepOperation(new MediaGraphTopologyListRequest())
+                    },
+                    new Step {
+                        Enabled = false,
+                        Name = "WaitForInput",
+                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
+                    new Step {
+                        Enabled = false,
+                        Name = "GraphInstanceList",
+                        Op = () => CreateStepOperation(new MediaGraphInstanceListRequest())
+                    },
+                    new Step {
+                        Enabled = false,
+                        Name = "WaitForInput",
+                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
                     new Step {
                         Enabled = true,
                         Name = "GraphTopologySet",
                         Op = () => CreateStepOperation(new MediaGraphTopologySetRequest(topology))
-                            .ContinueWith(t => Console.WriteLine(
-                                JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceSet",
                         Op = () => CreateStepOperation(new MediaGraphInstanceSetRequest(instance))
-                            .ContinueWith(t => Console.WriteLine(
-                                JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceActivate",
-                        Op = () => CreateStepOperation(new MediaGraphInstanceActivateRequest(instance.Name)) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceActivateRequest(instance.Name)) 
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceList",
                         Op = () => CreateStepOperation(new MediaGraphInstanceListRequest())
-                            .ContinueWith(t => Console.WriteLine(
-                                JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
+                    },
                     new Step {
                         Enabled = true,
                         Name = "WaitForInput",
-                        Op = () => PrintMessage("The topology will now be deactivated.\nPress <ENTER> to continue", ConsoleColor.Yellow, true) },
+                        Op = () => PrintMessage("The topology will now be deactivated.\nPress <ENTER> to continue", ConsoleColor.Yellow, true) 
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceDeactivate",
-                        Op = () => CreateStepOperation(new MediaGraphInstanceDeActivateRequest(instance.Name)) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceDeActivateRequest(instance.Name)) 
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceDelete",
-                        Op = () => CreateStepOperation(new MediaGraphInstanceDeleteRequest(instance.Name)) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceDeleteRequest(instance.Name)) 
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphInstanceList",
                         Op = () => CreateStepOperation(new MediaGraphInstanceListRequest())
-                            .ContinueWith(t => Console.WriteLine(
-                                JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
+                    },
                     new Step {
                         Enabled = true,
                         Name = "WaitForInput",
-                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
+                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) 
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphTopologyDelete",
-                        Op = () => CreateStepOperation(new MediaGraphInstanceDeleteRequest(topology.Name)) },
+                        Op = () => CreateStepOperation(new MediaGraphInstanceDeleteRequest(topology.Name)) 
+                    },
                     new Step {
                         Enabled = true,
                         Name = "WaitForInput",
-                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
+                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) 
+                    },
                     new Step {
                         Enabled = true,
                         Name = "GraphTopologyList",
                         Op = () => CreateStepOperation(new MediaGraphTopologyListRequest())
-                            .ContinueWith(t => Console.WriteLine(
-                                JsonSerializer.Serialize(t.Result, new JsonSerializerOptions { WriteIndented = true}))) },
+                    },
                     new Step {
                         Enabled = true,
                         Name = "WaitForInput",
-                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) },
+                        Op = () => PrintMessage("Press <ENTER> to continue", ConsoleColor.Yellow, true) 
+                    },
                 };
         }
 

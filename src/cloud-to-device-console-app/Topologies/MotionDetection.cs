@@ -101,7 +101,7 @@ namespace C2D_Console.Topologies
             graphProperties.Sinks.Add(new MediaGraphIoTHubMessageSink(
                 "hubSink",
                 hubGraphNodeInput,
-                "${hubSinkOutputName}"
+                "inferenceOutput"
                 )
             );
         }
