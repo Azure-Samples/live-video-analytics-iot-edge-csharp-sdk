@@ -14,7 +14,7 @@ namespace C2D_Console.Topologies
     {
         /// <summary>
         /// Inferencing connected to external AI service through HTTP Topology ingredients
-        ///    1. Parameters: rtspUserName, rtspPassword, rtspUrl, inferencingUrl, inferencingUserName, inferencingPassword, imageScaleMode, frameWidth, frameHeight, frameRate
+        ///    1. Parameters: rtspUserName, rtspPassword, rtspUrl, inferencingUrl, inferencingUserName, inferencingPassword, imageScaleMode, frameWidth, frameHeight
         ///    2. Sources: `MediaGraphRtspSource`
         ///    3. Processors: `MediaGraphFrameRateFilterProcessor`, `MediaGraphHttpExtension`
         ///    4. Sinks: `MediaGraphIoTHubMessageSink`
@@ -91,7 +91,6 @@ namespace C2D_Console.Topologies
             });
         }
 
-
         // Add sources to Topology
         private void SetSources(MediaGraphTopologyProperties graphProperties)
         {
@@ -108,29 +107,9 @@ namespace C2D_Console.Topologies
         // Add processors to Topology
         private void SetProcessors(MediaGraphTopologyProperties graphProperties)
         {
-
-            var activationSignalOffset = "-PT5S";
-            var minimumActivationTime = "PT30S";
-            var maximumActivationTime = "PT30S";
-            graphProperties.Processors.Add(
-               new MediaGraphSignalGateProcessor(
-                   "signalGateProcessor",
-                    new List<MediaGraphNodeInput> {
-                        new MediaGraphNodeInput() { NodeName = "iotMessageSource" },
-                        new MediaGraphNodeInput() { NodeName = "rtspSource" }
-                    },
-                    activationSignalOffset,
-                    minimumActivationTime,
-                    maximumActivationTime
-                )
-               {
-                   ActivationEvaluationWindow = "PT1S"
-               }
-           );
-
             graphProperties.Processors.Add(
                new MediaGraphHttpExtension(
-                   "inferenceClient",
+                   "httpExtension",
                     new List<MediaGraphNodeInput> {
                         new MediaGraphNodeInput() { NodeName = "rtspSource" }
                     },
