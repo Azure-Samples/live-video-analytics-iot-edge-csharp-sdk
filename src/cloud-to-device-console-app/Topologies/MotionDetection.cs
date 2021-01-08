@@ -95,7 +95,7 @@ namespace C2D_Console.Topologies
         {
             var hubGraphNodeInput = new List<MediaGraphNodeInput>
             {
-                { new MediaGraphNodeInput{NodeName = "inferenceClient"} }
+                { new MediaGraphNodeInput{NodeName = "motionDetection"} }
             };
 
             graphProperties.Sinks.Add(new MediaGraphIoTHubMessageSink(
