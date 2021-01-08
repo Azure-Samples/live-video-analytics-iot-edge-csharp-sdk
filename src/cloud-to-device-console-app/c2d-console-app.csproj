@@ -5,23 +5,14 @@
     <RootNamespace>C2D_Console</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="appsettings.json" />
-  </ItemGroup>
-   <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Models.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Azure.Media.Analytics.Edge" Version="1.0.0-beta.1" />
     <PackageReference Include="Microsoft.Azure.Devices" Version="1.28.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.6" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.6" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="appsettings.json" />
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
