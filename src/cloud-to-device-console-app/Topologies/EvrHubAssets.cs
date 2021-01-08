@@ -4,8 +4,8 @@ using System.Collections.Generic;
 
 namespace C2D_Console.Topologies
 {
-//Connect to inferencing using HTTP extension and then, to an external module using IoT Hub routing capabilities
-    
+    //Connect to inferencing using HTTP extension and then, to an external module using IoT Hub routing capabilities
+
     /// <summary>
     /// Required modules:
     ///     1. Live Video Analytics

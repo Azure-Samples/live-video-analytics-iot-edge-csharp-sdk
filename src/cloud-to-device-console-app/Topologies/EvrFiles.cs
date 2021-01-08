@@ -1,5 +1,4 @@
 using Azure.Media.Analytics.Edge.Models;
-using System;
 using System.Collections.Generic;
 
 namespace C2D_Console.Topologies

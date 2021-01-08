@@ -1,13 +1,13 @@
-﻿using C2D_Console.Topologies;
+﻿using Azure.Media.Analytics.Edge.Models;
+using C2D_Console.Topologies;
+using Microsoft.Azure.Devices;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Azure.Media.Analytics.Edge.Models;
-using Microsoft.Azure.Devices;
 
 namespace C2D_Console
 {
