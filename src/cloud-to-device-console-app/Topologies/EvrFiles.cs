@@ -1,6 +1,5 @@
-using System;
+using Azure.Media.Analytics.Edge.Models;
 using System.Collections.Generic;
-using Microsoft.Azure.Media.LiveVideoAnalytics.Edge.Models;
 
 namespace C2D_Console.Topologies
 {
@@ -25,109 +24,111 @@ namespace C2D_Console.Topologies
         /// </remark>
         public MediaGraphTopology Build()
         {
-            return new MediaGraphTopology(
-                "EventsToFilesMotionDetection",
-                null,
-                null,
-                new MediaGraphTopologyProperties(
-                    "Event-based video recording to local files based on motion events",
-                    parameters: SetParameters(),
-                    sources: SetSources(),
-                    processors: SetProcessors(),
-                    sinks: SetSinks()
-                ));
+            var graphProperties = new MediaGraphTopologyProperties
+            {
+                Description = "Event - based video recording to local files based on motion events",
+            };
+
+            SetParameters(graphProperties);
+            SetSources(graphProperties);
+            SetProcessors(graphProperties);
+            SetSinks(graphProperties);
+
+            return new MediaGraphTopology("EventsToFilesMotionDetection")
+            {
+                Properties = graphProperties
+            };
         }
 
         // Add parameters to Topology
-        private List<MediaGraphParameterDeclaration> SetParameters()
+        private void SetParameters(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphParameterDeclaration> {
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUserName",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp source user name.",
-                    DefaultProperty = "dummyUserName"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspPassword",
-                    Type = MediaGraphParameterType.SecretString,
-                    Description = "rtsp source password.",
-                    DefaultProperty = "dummyPassword"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUrl",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp Url"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "motionSensitivity",
-                    Type = MediaGraphParameterType.String,
-                    Description = "motion detection sensitivity",
-                    DefaultProperty = "medium"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "fileSinkOutputName",
-                    Type = MediaGraphParameterType.String,
-                    Description = "file sink output name",
-                    DefaultProperty = "filesinkOutput"
-                }},
-            };
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUserName", MediaGraphParameterType.String)
+            {
+                Description = "rtsp source user name.",
+                Default = "dummyUserName"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspPassword", MediaGraphParameterType.SecretString)
+            {
+                Description = "rtsp source password.",
+                Default = "dummyPassword"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUrl", MediaGraphParameterType.String)
+            {
+                Description = "rtsp Url"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("motionSensitivity", MediaGraphParameterType.String)
+            {
+                Description = "motion detection sensitivity",
+                Default = "medium"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("fileSinkOutputName", MediaGraphParameterType.String)
+            {
+                Description = "file sink output name",
+                Default = "filesinkOutput"
+            });
         }
 
         // Add sources to Topology
-        private List<MediaGraphSource> SetSources()
+        private void SetSources(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSource> {
-                { new MediaGraphRtspSource {
-                    Name = "rtspSource",
-                    Endpoint = new MediaGraphUnsecuredEndpoint {
-                        Url = "${rtspUrl}",
-                        Credentials = new MediaGraphUsernamePasswordCredentials {
-                            Username = "${rtspUserName}",
-                            Password = "${rtspPassword}"
-                        }
-                    }
-                }},
-            };
+            graphProperties.Sources.Add(new MediaGraphRtspSource("rtspSource", new MediaGraphUnsecuredEndpoint("${rtspUrl}")
+            {
+                Credentials = new MediaGraphUsernamePasswordCredentials("${rtspUserName}")
+                {
+                    Password = "${rtspPassword}"
+                }
+            })
+            );
         }
 
         // Add processors to Topology
-        private List<MediaGraphProcessor> SetProcessors()
+        private void SetProcessors(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphProcessor> {
-                { new MediaGraphMotionDetectionProcessor {
-                    Name = "motionDetection",
-                    Sensitivity = "${motionSensitivity}",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("rtspSource") }
+
+            graphProperties.Processors.Add(
+                new MediaGraphMotionDetectionProcessor(
+                    "motionDetection", 
+                    new List<MediaGraphNodeInput> { 
+                        new MediaGraphNodeInput() { NodeName = "rtspSource" } 
                     }
-                }},
-                { new MediaGraphSignalGateProcessor {
-                    Name = "signalGateProcessor",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("motionDetection") },
-                        { new MediaGraphNodeInput("rtspSource") }
+                )
+                {
+                    Sensitivity = "${motionSensitivity}"
+                }
+            );
+
+            var activationSignalOffset = "PT0S";
+            var minimumActivationTime = "PT5S";
+            var maximumActivationTime = "PT5S";
+            graphProperties.Processors.Add(
+               new MediaGraphSignalGateProcessor(
+                   "signalGateProcessor", 
+                    new List<MediaGraphNodeInput> { 
+                        new MediaGraphNodeInput() { NodeName = "motionDetection" }, 
+                        new MediaGraphNodeInput() { NodeName = "rtspSource" } 
                     },
-                    ActivationEvaluationWindow = "PT1S",
-                    ActivationSignalOffset = "PT0S",
-                    MinimumActivationTime = "PT5S",
-                    MaximumActivationTime = "PT5S"
-                }},
-            };
+                    activationSignalOffset,
+                    minimumActivationTime,
+                    maximumActivationTime
+                )
+               {
+                   ActivationEvaluationWindow = "PT1S"
+               }
+           );
         }
 
         // Add sinks to Topology
-        private List<MediaGraphSink> SetSinks()
+        private void SetSinks(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSink> {
-                { new MediaGraphFileSink {
-                    Name = "fileSink",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("signalGateProcessor") }
-                    },
-                    FilePathPattern = "/var/media/sampleFilesFromEVR-${fileSinkOutputName}-${System.DateTime}"
-                }},
+            var graphNodeInput = new List<MediaGraphNodeInput>
+            {
+                { new MediaGraphNodeInput{NodeName = "signalGateProcessor"} }
             };
+            var baseDirectoryPath = "/var/media";
+            var maximumSizeMiB = "512";
+            var filePathPattern = "sampleFilesFromEVR-${fileSinkOutputName}-${System.DateTime}";
+            graphProperties.Sinks.Add(new MediaGraphFileSink("fileSink", graphNodeInput, baseDirectoryPath, filePathPattern, maximumSizeMiB));
         }
     }
 }

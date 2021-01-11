@@ -1,6 +1,5 @@
-using System;
+using Azure.Media.Analytics.Edge.Models;
 using System.Collections.Generic;
-using Microsoft.Azure.Media.LiveVideoAnalytics.Edge.Models;
 
 namespace C2D_Console.Topologies
 {
@@ -14,7 +13,7 @@ namespace C2D_Console.Topologies
     {
         /// <summary>
         /// Inferencing connected to external AI service through HTTP Topology ingredients
-        ///    1. Parameters: rtspUserName, rtspPassword, rtspUrl, inferencingUrl, inferencingUserName, inferencingPassword, imageEncoding, imageScaleMode, frameWidth, frameHeight, frameRate
+        ///    1. Parameters: rtspUserName, rtspPassword, rtspUrl, inferencingUrl, inferencingUserName, inferencingPassword, imageScaleMode, frameWidth, frameHeight
         ///    2. Sources: `MediaGraphRtspSource`
         ///    3. Processors: `MediaGraphFrameRateFilterProcessor`, `MediaGraphHttpExtension`
         ///    4. Sinks: `MediaGraphIoTHubMessageSink`
@@ -26,157 +25,128 @@ namespace C2D_Console.Topologies
         /// </remark>
         public MediaGraphTopology Build()
         {
-            return new MediaGraphTopology(
-                "InferencingWithHttpExtension",
-                null,
-                null,
-                new MediaGraphTopologyProperties(
-                    "Analyzing live video using HTTP Extension to send images to an external inference engine",
-                    parameters: SetParameters(),
-                    sources: SetSources(),
-                    processors: SetProcessors(),
-                    sinks: SetSinks()
-                ));
+            var graphProperties = new MediaGraphTopologyProperties
+            {
+                Description = "Analyzing live video using HTTP Extension to send images to an external inference engine",
+            };
+
+            SetParameters(graphProperties);
+            SetProcessors(graphProperties);
+            SetSources(graphProperties);
+            SetSinks(graphProperties);
+
+            return new MediaGraphTopology("InferencingWithHttpExtension")
+            {
+                Properties = graphProperties
+            };
         }
 
         // Add parameters to Topology
-        private List<MediaGraphParameterDeclaration> SetParameters()
+        private void SetParameters(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphParameterDeclaration> {
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUserName",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp source user name.",
-                    DefaultProperty = "dummyUserName"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspPassword",
-                    Type = MediaGraphParameterType.SecretString,
-                    Description = "rtsp source password.",
-                    DefaultProperty = "dummyPassword"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "rtspUrl",
-                    Type = MediaGraphParameterType.String,
-                    Description = "rtsp Url"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "inferencingUrl",
-                    Type = MediaGraphParameterType.String,
-                    Description = "inferencing Url",
-                    DefaultProperty = "http://yolov3/score"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "inferencingUserName",
-                    Type = MediaGraphParameterType.String,
-                    Description = "inferencing endpoint user name.",
-                    DefaultProperty = "dummyUserName"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "inferencingPassword",
-                    Type = MediaGraphParameterType.SecretString,
-                    Description = "inferencing endpoint password.",
-                    DefaultProperty = "dummyPassword"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "imageEncoding",
-                    Type = MediaGraphParameterType.String,
-                    Description = "image encoding for frames",
-                    DefaultProperty = "bmp"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "imageScaleMode",
-                    Type = MediaGraphParameterType.String,
-                    Description = "image scaling mode",
-                    DefaultProperty = "preserveAspectRatio"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "frameWidth",
-                    Type = MediaGraphParameterType.String,
-                    Description = "Width of the video frame to be received from LVA.",
-                    DefaultProperty = "416"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "frameHeight",
-                    Type = MediaGraphParameterType.String,
-                    Description = "Height of the video frame to be received from LVA.",
-                    DefaultProperty = "416"
-                }},
-                { new MediaGraphParameterDeclaration {
-                    Name = "frameRate",
-                    Type = MediaGraphParameterType.String,
-                    Description = "Rate of the frames per second to be received from LVA.",
-                    DefaultProperty = "2"
-                }},
-            };
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUserName", MediaGraphParameterType.String)
+            {
+                Description = "rtsp source user name.",
+                Default = "dummyUserName"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspPassword", MediaGraphParameterType.SecretString)
+            {
+                Description = "rtsp source password.",
+                Default = "dummyPassword"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("rtspUrl", MediaGraphParameterType.String)
+            {
+                Description = "rtsp Url"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("inferencingUrl", MediaGraphParameterType.String)
+            {
+                Description = "inferencing Url",
+                Default = "http://yolov3/score"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("inferencingUserName", MediaGraphParameterType.String)
+            {
+                Description = "inferencing endpoint user name.",
+                Default = "dummyUserName"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("inferencingPassword", MediaGraphParameterType.String)
+            {
+                Description = "inferencing endpoint password.",
+                Default = "dummyPassword"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("imageScaleMode", MediaGraphParameterType.String)
+            {
+                Description = "image scaling mode",
+                Default = "preserveAspectRatio"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("frameWidth", MediaGraphParameterType.String)
+            {
+                Description = "Width of the video frame to be received from LVA.",
+                Default = "416"
+            });
+            graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("frameHeight", MediaGraphParameterType.String)
+            {
+                Description = "Height of the video frame to be received from LVA.",
+                Default = "416"
+            });
         }
 
         // Add sources to Topology
-        private List<MediaGraphSource> SetSources()
+        private void SetSources(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSource> {
-                { new MediaGraphRtspSource {
-                    Name = "rtspSource",
-                    Endpoint = new MediaGraphUnsecuredEndpoint {
-                        Url = "${rtspUrl}",
-                        Credentials = new MediaGraphUsernamePasswordCredentials {
-                            Username = "${rtspUserName}",
-                            Password = "${rtspPassword}"
-                        }
-                    }
-                }},
-            };
+            graphProperties.Sources.Add(new MediaGraphRtspSource("rtspSource", new MediaGraphUnsecuredEndpoint("${rtspUrl}")
+            {
+                Credentials = new MediaGraphUsernamePasswordCredentials("${rtspUserName}")
+                {
+                    Password = "${rtspPassword}"
+                }
+            })
+            );
         }
 
         // Add processors to Topology
-        private List<MediaGraphProcessor> SetProcessors()
+        private void SetProcessors(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphProcessor> {
-                { new MediaGraphFrameRateFilterProcessor {
-                    Name = "frameRateFilter",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("rtspSource") }
+            graphProperties.Processors.Add(
+               new MediaGraphHttpExtension(
+                   "httpExtension",
+                    new List<MediaGraphNodeInput> {
+                        new MediaGraphNodeInput() { NodeName = "rtspSource" }
                     },
-                    MaximumFps = "${frameRate}"
-                }},
-                { new MediaGraphHttpExtension {
-                    Name = "httpExtension",
-                    Endpoint = new MediaGraphUnsecuredEndpoint {
-                        Url = "${inferencingUrl}",
-                        Credentials = new MediaGraphUsernamePasswordCredentials {
-                            Username = "${inferencingUserName}",
-                            Password = "${inferencingPassword}"
-                        }
-                    },
-                    Image = new MediaGraphImage {
-                        Scale = new MediaGraphImageScale {
-                            Mode = "${imageScaleMode}",
-                            Width = "${frameWidth}",
-                            Height = "${frameHeight}"
-                        },
-                        Format = new MediaGraphImageFormatEncoded {
-                            Encoding = "${imageEncoding}"
-                        }
-                    },
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("frameRateFilter") }
-                    }
-                }},
-            };
+                   new MediaGraphUnsecuredEndpoint("${inferencingUrl}")
+                   {
+                       Credentials = new MediaGraphUsernamePasswordCredentials("${inferencingUserName}")
+                       {
+                           Password = "${inferencingPassword}"
+                       }
+                   },
+                   new MediaGraphImage
+                   {
+                       Scale = new MediaGraphImageScale(new MediaGraphImageScaleMode())
+                       {
+                           Mode = "${imageScaleMode}",
+                           Width = "${frameWidth}",
+                           Height = "${frameHeight}"
+                       },
+                       Format = new MediaGraphImageFormatBmp()
+                   }
+                )
+           );
         }
 
         // Add sinks to Topology
-        private List<MediaGraphSink> SetSinks()
+        private void SetSinks(MediaGraphTopologyProperties graphProperties)
         {
-            return new List<MediaGraphSink> {
-                { new MediaGraphIoTHubMessageSink {
-                    Name = "hubSink",
-                    HubOutputName = "inferenceOutput",
-                    Inputs = new List<MediaGraphNodeInput> {
-                        { new MediaGraphNodeInput("httpExtension") }
-                    }
-                }},
+            var hubGraphNodeInput = new List<MediaGraphNodeInput>
+            {
+                { new MediaGraphNodeInput{NodeName = "httpExtension"} }
             };
+
+            graphProperties.Sinks.Add(new MediaGraphIoTHubMessageSink(
+                "hubSink",
+                hubGraphNodeInput,
+                "inferenceOutput"
+                )
+            );
         }
     }
 }
