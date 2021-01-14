@@ -60,7 +60,7 @@ namespace C2D_Console.Topologies
             graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("motionSensitivity", MediaGraphParameterType.String)
             {
                 Description = "motion detection sensitivity",
-                Default = "motionSensitivity"
+                Default = "medium"
             });
             graphProperties.Parameters.Add(new MediaGraphParameterDeclaration("fileSinkOutputName", MediaGraphParameterType.String)
             {
