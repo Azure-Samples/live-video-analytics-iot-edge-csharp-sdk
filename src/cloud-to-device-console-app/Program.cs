@@ -272,6 +272,10 @@ namespace C2D_Console
             }
         }
 
+        /// <summary>
+        /// Create an instance and invoke the CloudToDeviceMethod to execute a Direct Method on the device.
+        /// </summary>
+        /// <param name="request">The MethodRequest to execute</param>
         static async Task CreateStepOperation(MethodRequest request)
         {
             var directMethod = new CloudToDeviceMethod(request.MethodName);
